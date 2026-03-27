@@ -1,0 +1,23 @@
+# ── Core MCP framework ──────────────────────────────────────────────────────
+# FastMCP is the high-level Python wrapper around the official MCP SDK.
+# It lets you define tools with plain Python functions decorated with @mcp.tool().
+mcp[cli]
+
+# ── Browser automation (primary login strategy) ──────────────────────────────
+# Playwright launches a real Chromium browser so the user can log in manually
+# through any dynamic/popup-based auth flow (SSO, CAPTCHA, etc.)
+playwright
+
+# ── HTTP client (used in tools and http-based auth fallback) ─────────────────
+requests
+
+# ── Google Gemini SDK (new "google-genai" package, NOT google-generativeai) ──
+google-genai
+
+# ── Environment variable loading (.env file support) ─────────────────────────
+python-dotenv
+
+# ── Symmetric encryption for cookie persistence ──────────────────────────────
+# Fernet (part of the cryptography package) is used to encrypt saved cookies
+# so they are never stored in plaintext on disk.
+cryptography
