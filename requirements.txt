@@ -26,3 +26,23 @@ cryptography
 # ── YAML parser — used by the gateway to read gateway/config.yaml ────────────
 # PyYAML is the standard Python YAML library.
 PyYAML
+
+# ── FastAPI web framework + server ───────────────────────────────────────────
+fastapi
+uvicorn[standard]
+
+# ── Database (SQLite via SQLAlchemy) ─────────────────────────────────────────
+sqlalchemy
+
+# ── Settings management ───────────────────────────────────────────────────────
+pydantic-settings
+
+# ── JWT authentication ────────────────────────────────────────────────────────
+python-jose[cryptography]
+passlib[bcrypt]
+
+# ── Form data support (required by FastAPI for multipart) ────────────────────
+python-multipart
+
+# ── Email validation (used by Pydantic EmailStr) ─────────────────────────────
+email-validator

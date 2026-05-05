@@ -160,7 +160,7 @@ class GatewayServer:
         # Retrieve the live session for this institution.
         session = self._sessions[slug]
 
-        print(f"[Gateway] Routing  {name}  →  {slug}:{original_name}  args={arguments}")
+        print(f"[Gateway] Routing  {name}  →  {slug}:{original_name}  args={arguments}", file=sys.stderr)
 
         # Delegate the call to the institution server.
         try:
@@ -172,7 +172,7 @@ class GatewayServer:
             # Surface institution-level errors as a text message so the LLM
             # can decide how to handle them (e.g., suggest re-logging in).
             error_msg = f"Institution '{slug}' returned an error for '{original_name}': {exc}"
-            print(f"[Gateway] ERROR: {error_msg}")
+            print(f"[Gateway] ERROR: {error_msg}", file=sys.stderr)
             return [types.TextContent(type="text", text=error_msg)]
 
     # ── Institution connection management ─────────────────────────────────────
@@ -197,7 +197,7 @@ class GatewayServer:
         institutions_config: list[dict] = _gateway_config.get("institutions", [])
 
         if not institutions_config:
-            print("[Gateway] WARNING: No institutions defined in gateway/config.yaml.")
+            print("[Gateway] WARNING: No institutions defined in gateway/config.yaml.", file=sys.stderr)
             return
 
         for inst in institutions_config:
@@ -211,8 +211,8 @@ class GatewayServer:
             command = sys.executable if raw_command in ("python", "python3") else raw_command
             args: list[str] = inst.get("args", [])
 
-            print(f"[Gateway] Connecting to institution: {display_name} ({slug})")
-            print(f"[Gateway]   Command: {command} {' '.join(args)}")
+            print(f"[Gateway] Connecting to institution: {display_name} ({slug})", file=sys.stderr)
+            print(f"[Gateway]   Command: {command} {' '.join(args)}", file=sys.stderr)
 
             # ── Spawn the institution subprocess ──────────────────────────────
             # StdioServerParameters tells the MCP client how to launch the
@@ -275,14 +275,16 @@ class GatewayServer:
             print(
                 f"[Gateway] ✓ {display_name}: "
                 f"{institution_tool_count} tools registered "
-                f"({', '.join(t.name for t in tools_response.tools)})"
+                f"({', '.join(t.name for t in tools_response.tools)})",
+                file=sys.stderr,
             )
 
         total = len(self._tools)
         institutions_count = len(self._sessions)
         print(
             f"\n[Gateway] Ready — {total} tools aggregated "
-            f"from {institutions_count} institution(s).\n"
+            f"from {institutions_count} institution(s).\n",
+            file=sys.stderr,
         )
 
     # ── Main run loop ─────────────────────────────────────────────────────────
@@ -311,7 +313,7 @@ class GatewayServer:
             # read from stdin for any other purpose after this line.
             async with stdio_server() as (read_stream, write_stream):
 
-                print("[Gateway] Stdio transport open — waiting for agent.")
+                print("[Gateway] Stdio transport open — waiting for agent.", file=sys.stderr)
 
                 # ── Step 3: Run the MCP server protocol ───────────────────────
                 # server.run() enters the JSON-RPC message loop:
@@ -330,7 +332,7 @@ class GatewayServer:
             # ── Step 4: Cleanup ───────────────────────────────────────────────
             # The AsyncExitStack unwinds here, closing all institution sessions
             # and terminating their subprocess (in reverse order of registration).
-            print("[Gateway] Agent disconnected. Shutting down institution servers.")
+            print("[Gateway] Agent disconnected. Shutting down institution servers.", file=sys.stderr)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
