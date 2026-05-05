@@ -45,37 +45,66 @@ def get_group_contents(group_id: int) -> list[dict]:
         "intro": _clean_html(s.get("AdministrativeProcedureServiceIntro"))
     } for s in services]
 def get_service_details(service_id: int) -> dict:
-    """Fetch requirements and applyUrl for a specific service ID."""
+    """Fetch full details for a specific service ID — requirements, conditions, prices, deadlines, etc."""
     payload = {"id": str(service_id), "serviceUniqueId": None}
     r = requests.post(f"{BASE_URL}/GetServiceDetails", json=payload, headers=HEADERS)
     r.raise_for_status()
     d = r.json()
 
-    # --- 1. Find the Unique ID for the link ---
-    # We try ApsUniqueName first, then try to extract it from the external link field
+    # Apply URL
     unique_name = d.get("ApsUniqueName")
-
     ext_link = d.get("ServiceExternalApplicationLink") or ""
     if not unique_name and "apsUniqueName=" in ext_link:
-        # Extracts 'MVR-5217' from '/apply-for-service.nspx?apsUniqueName=MVR-5217'
         unique_name = ext_link.split("apsUniqueName=")[-1]
-
     if not unique_name:
-        # Fallback to the abbreviation if both above fail
         unique_name = d.get("ApsNameAbbrivation")
 
-    # --- 2. Extract Documents ---
-    state_groups = d.get("StateGroupDetails", [])
-    docs = []
-    if state_groups:
-        # Usually, documents are in the first group's 'InProofDocuments'
-        docs = [doc["DocumentName"] for doc in state_groups[0].get("InProofDocuments", [])]
+    is_electronic = (d.get("ServiceApplicationType") or {}).get("Key") == 1
+
+    # Documents
+    first_group = (d.get("StateGroupDetails") or [{}])[0]
+    process_docs = [doc["DocumentName"] for doc in first_group.get("InProcessDocuments", [])]
+    proof_docs = [doc["DocumentName"] for doc in first_group.get("InProofDocuments", [])]
+    requirements = process_docs + proof_docs
+
+    # Conditions
+    conditions = [
+        c["EvidenceProofDocument"]["DocumentNameMK"]
+        for c in d.get("ApsConditions", [])
+        if c.get("EvidenceProofDocument")
+    ]
+
+    # Prices
+    prices = [
+        {
+            "label": p["Value"],
+            "amount": p["Price"],
+            "currency": "MKD",
+            "purpose": slip.get("PurposeOfPayment"),
+        }
+        for slip in d.get("ApsPaymentSlips", [])
+        for p in slip.get("PriceList", [])
+    ]
+
+    # Deadline
+    deadline_entry = next(
+        (dl for dl in d.get("DeadLines", []) if dl.get("StateFromId") == 3), None
+    )
+    deadline_days = deadline_entry["DaysValue"] if deadline_entry else None
 
     return {
         "id": d.get("Id"),
         "name": d.get("AdministrativeProcedureServiceName"),
         "description": _clean_html(d.get("AdministrativeProcedureServiceDescription")),
-        "requirements": docs,
-        "is_electronic": d.get("IsElectronicService"),
-        "applyUrl": f"https://uslugi.gov.mk/apply-for-service.nspx?apsUniqueName={unique_name}" if unique_name else None
+        "intro": _clean_html(d.get("AdministrativeProcedureServiceIntro")),
+        "is_electronic": is_electronic,
+        "applyUrl": f"https://uslugi.gov.mk/apply-for-service.nspx?apsUniqueName={unique_name}" if unique_name else None,
+        "note": None if is_electronic else "Само физичко поднесување",
+        "eid_level": (d.get("ApsEidLevelType") or {}).get("Value"),
+        "requirements": requirements,
+        "conditions": conditions,
+        "prices": prices,
+        "deadline_days": deadline_days,
+        "institution": (d.get("InstituionOwner") or {}).get("InstitutionName"),
+        "regulations": [reg["RegulationName"] for reg in d.get("Regulations", [])],
     }
