@@ -26,5 +26,11 @@ env/
 # Downloaded via: playwright install chromium
 # No need to commit them.
 
+# ── Claude Code workspace ────────────────────────────────────────────────────
+.claude/
+
+# ── Test/debug artifacts ──────────────────────────────────────────────────────
+crm_detail.png
+
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store

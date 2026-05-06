@@ -42,3 +42,10 @@ institutions:
     args:
       - "-m"
       - "institutions.mojtermin.main"
+
+  - slug: crm
+    name: "crm.com.mk"
+    command: python
+    args:
+      - "-m"
+      - "institutions.crm.main"
