@@ -6,7 +6,7 @@ import ChatInput from "../components/chat/ChatInput";
 import SuggestedQuestions from "../components/chat/SuggestedQuestions";
 
 export default function Assistant() {
-  const { messages, loading, error, send, reset } = useChat();
+  const { messages, loading, error, send, reset, loadSession, sessionTitle } = useChat();
   const bottomRef = useRef(null);
   const location = useLocation();
 
@@ -15,14 +15,20 @@ export default function Assistant() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Support pre-filled message from Dashboard quick actions
+  // Load existing session from ?session= param, or send initial message from Dashboard
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sessionParam = params.get("session");
+    if (sessionParam) {
+      loadSession(Number(sessionParam));
+      return;
+    }
     const initial = location.state?.initialMessage;
     if (initial) {
       send(initial);
       window.history.replaceState({}, "");
     }
-  }, []);
+  }, [location.search]); // eslint-disable-line
 
   const isEmpty = messages.length === 0;
 
@@ -31,8 +37,8 @@ export default function Assistant() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900">
         <div>
-          <h2 className="text-white font-semibold">AI Assistant</h2>
-          <p className="text-gray-500 text-xs">Powered by Gemini 2.0 Flash · Macedonian Government Services</p>
+          <h2 className="text-white font-semibold">{sessionTitle || "AI Assistant"}</h2>
+          <p className="text-gray-500 text-xs">Powered by Gemini 2.5 Flash · Macedonian Government Services</p>
         </div>
         {!isEmpty && (
           <button

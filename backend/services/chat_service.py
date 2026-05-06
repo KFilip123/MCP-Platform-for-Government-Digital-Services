@@ -47,11 +47,16 @@ SECURITY RULES:
   3. If a uslugi tool returns a session expired error, tell the user and offer to call uslugi__login.
   4. Keep responses concise and in plain language.
   5. When presenting lists (services, slots, appointments), use bullet points.
-  6. If the user asks about something unrelated to these portals, politely explain
-     that you are specialised for Macedonian government services.
+  6. If the user asks about something unrelated to these portals, do NOT just
+     say you cannot help. Instead: briefly explain your scope, then offer 2-3
+     concrete things you CAN do (e.g. "I can look up passport renewal steps,
+     find a doctor near you, or check appointment slots — which would you like?").
+     Always end with a question so the user can continue.
   7. If the user's request is related to these portals but there is no tool
-     available for it, tell the user clearly that this feature is not supported
-     yet. Do NOT attempt to improvise or call unrelated tools as a workaround.
+     available for it, do NOT leave the user at a dead end. Instead:
+     a) Acknowledge what they are trying to do.
+     b) Suggest the closest thing you CAN help with.
+     Do NOT improvise or call unrelated tools as a workaround.
      EXCEPTION: for uslugi service lookups, always call uslugi__list_all_services
      before concluding a service is not available — the portal has 994 services
      and search may miss them due to keyword mismatch.
@@ -94,12 +99,19 @@ class ChatService:
     def __init__(self):
         self._mcp_session: ClientSession | None = None
         self._gemini_client: genai.Client | None = None
-        self._gemini_tools: list[genai_types.Tool] = []
+        self._all_declarations: list[genai_types.FunctionDeclaration] = []
         self._exit_stack: AsyncExitStack | None = None
         # Per-user conversation histories: user_id → list[Content]
         self._histories: dict[int, list[genai_types.Content]] = {}
         # Per-user locks to guard history access across threads
         self._locks: dict[int, asyncio.Lock] = {}
+
+    def _build_tools(self, disabled: set[str]) -> list[genai_types.Tool]:
+        declarations = [
+            fd for fd in self._all_declarations
+            if not any(fd.name.startswith(f"{slug}__") for slug in disabled)
+        ]
+        return [genai_types.Tool(function_declarations=declarations)]
 
     def _get_lock(self, user_id: int) -> asyncio.Lock:
         if user_id not in self._locks:
@@ -124,13 +136,7 @@ class ChatService:
         await self._mcp_session.initialize()
 
         tools_response = await self._mcp_session.list_tools()
-        self._gemini_tools = [
-            genai_types.Tool(
-                function_declarations=[
-                    _mcp_tool_to_gemini_function(t) for t in tools_response.tools
-                ]
-            )
-        ]
+        self._all_declarations = [_mcp_tool_to_gemini_function(t) for t in tools_response.tools]
         self._gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
         print(f"[ChatService] Gateway connected — {len(tools_response.tools)} tools available.", file=sys.stderr)
 
@@ -164,10 +170,12 @@ class ChatService:
         message: str,
         db: Session,
         session_id: int | None = None,
+        disabled_institutions: set[str] | None = None,
     ) -> tuple[str, int]:
         assert self._mcp_session is not None, "ChatService.start() was not called"
 
         # Resolve or create the DB chat session
+        is_new_session = session_id is None
         if session_id:
             chat_session = db.query(ChatSession).filter(
                 ChatSession.id == session_id,
@@ -186,6 +194,8 @@ class ChatService:
         # Save user message to DB
         db.add(Message(session_id=chat_session.id, role="user", content=message))
         db.commit()
+
+        gemini_tools = self._build_tools(disabled_institutions or set())
 
         async with self._get_lock(user_id):
             history = self._load_history(user_id, db)
@@ -206,7 +216,7 @@ class ChatService:
                         contents=history,
                         config=genai_types.GenerateContentConfig(
                             system_instruction=SYSTEM_PROMPT,
-                            tools=self._gemini_tools,
+                            tools=gemini_tools,
                             tool_config=genai_types.ToolConfig(
                                 function_calling_config=genai_types.FunctionCallingConfig(
                                     mode="AUTO"
@@ -276,6 +286,25 @@ class ChatService:
         # Save assistant reply to DB
         db.add(Message(session_id=chat_session.id, role="assistant", content=final_text))
         db.commit()
+
+        # Generate a short title from the first message
+        if is_new_session:
+            try:
+                title_response = await asyncio.to_thread(
+                    self._gemini_client.models.generate_content,
+                    model=settings.GEMINI_MODEL,
+                    contents=f"User message: {message}",
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=(
+                            "Generate a short chat title (3-5 words, no quotes, no punctuation) "
+                            "that summarises what the user is asking about. Reply with only the title."
+                        ),
+                    ),
+                )
+                chat_session.title = title_response.text.strip()[:60]
+                db.commit()
+            except Exception:
+                pass
 
         return final_text, chat_session.id
 

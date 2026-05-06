@@ -1,65 +1,129 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getServices } from "../api/services";
+import { getInstitutions, connectInstitution, disconnectInstitution } from "../api/services";
+import InstitutionModal from "../components/services/InstitutionModal";
 
-const CATEGORY_ICONS = {
-  Appointments: "📅",
-  Documents: "📄",
-  Transport: "🚗",
-  Citizenship: "🏛️",
-  Health: "💊",
-  General: "⚙️",
+const INSTITUTION_ICONS = {
+  "uslugi.gov.mk": "🏛️",
+  "mojtermin.mk": "🏥",
+  "crm.com.mk": "📋",
 };
 
 export default function Services() {
-  const [catalogue, setCatalogue] = useState([]);
-  const navigate = useNavigate();
+  const [institutions, setInstitutions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(null);
+  const [detailInstitution, setDetailInstitution] = useState(null);
 
   useEffect(() => {
-    getServices().then(setCatalogue).catch(() => {});
+    getInstitutions()
+      .then(setInstitutions)
+      .finally(() => setLoading(false));
   }, []);
 
-  const askAbout = (serviceName) => {
-    navigate("/assistant", { state: { initialMessage: `Tell me about: ${serviceName}` } });
+  const toggle = async (inst) => {
+    setToggling(inst.slug);
+    try {
+      const updated = inst.connected
+        ? await disconnectInstitution(inst.slug)
+        : await connectInstitution(inst.slug);
+      setInstitutions((prev) =>
+        prev.map((i) => (i.slug === inst.slug ? { ...i, connected: updated.connected } : i))
+      );
+    } finally {
+      setToggling(null);
+    }
   };
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-white">Services</h2>
-        <p className="text-gray-400 mt-1">All connected government services, organised by category.</p>
+        <p className="text-gray-400 mt-1">
+          Connected government platforms. Disconnected services are hidden from the AI assistant.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {catalogue.map(({ category, services }) => (
-          <div key={category} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-2">
-              <span className="text-lg">{CATEGORY_ICONS[category] || "📋"}</span>
-              <h3 className="text-white font-semibold">{category}</h3>
-              <span className="ml-auto text-xs text-gray-500">{services.length} services</span>
-            </div>
-            <div className="divide-y divide-gray-800">
-              {services.map((s) => (
-                <div key={s.name} className="px-5 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors">
-                  <div>
-                    <p className="text-sm text-white">{s.name}</p>
-                    <span className="inline-flex items-center gap-1 text-xs text-green-400 mt-0.5">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                      Connected
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => askAbout(s.name)}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-800 hover:border-indigo-600 px-3 py-1.5 rounded-lg transition-colors"
+      {loading ? (
+        <div className="text-gray-500 text-sm">Loading...</div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {institutions.map((inst) => (
+            <div
+              key={inst.slug}
+              className={`bg-gray-900 border rounded-xl overflow-hidden transition-colors ${
+                inst.connected ? "border-gray-800" : "border-gray-700 opacity-60"
+              }`}
+            >
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-3">
+                <span className="text-2xl">{INSTITUTION_ICONS[inst.name] || "🔗"}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-semibold">{inst.name}</h3>
+                  <a
+                    href={inst.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-indigo-400 hover:underline truncate"
                   >
-                    Ask AI
-                  </button>
+                    {inst.url}
+                  </a>
                 </div>
-              ))}
+                <span
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                    inst.connected
+                      ? "bg-green-900/40 text-green-400"
+                      : "bg-gray-800 text-gray-500"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      inst.connected ? "bg-green-400" : "bg-gray-500"
+                    }`}
+                  />
+                  {inst.connected ? "Connected" : "Disconnected"}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-4">
+                <p className="text-gray-400 text-sm">{inst.description}</p>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-gray-800 flex items-center gap-3">
+                <button
+                  onClick={() => toggle(inst)}
+                  disabled={toggling === inst.slug}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    inst.connected
+                      ? "border border-red-800 text-red-400 hover:bg-red-900/20"
+                      : "border border-green-800 text-green-400 hover:bg-green-900/20"
+                  }`}
+                >
+                  {toggling === inst.slug
+                    ? "..."
+                    : inst.connected
+                    ? "Disconnect"
+                    : "Connect"}
+                </button>
+                <button
+                  onClick={() => setDetailInstitution(inst)}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                >
+                  More Details
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {detailInstitution && (
+        <InstitutionModal
+          institution={detailInstitution}
+          onClose={() => setDetailInstitution(null)}
+        />
+      )}
     </div>
   );
 }

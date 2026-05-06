@@ -23,6 +23,10 @@ class MessageOut(BaseModel):
         from_attributes = True
 
 
+class SessionUpdate(BaseModel):
+    title: str
+
+
 class SessionOut(BaseModel):
     id: int
     title: str | None

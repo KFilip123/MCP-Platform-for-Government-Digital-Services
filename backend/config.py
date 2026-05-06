@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     DB_PATH: Path = Path(__file__).parent.parent / "storage" / "app.db"
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_APP_PASSWORD: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"

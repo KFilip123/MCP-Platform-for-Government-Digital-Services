@@ -12,4 +12,5 @@ class User(Base):
     full_name = Column(String, nullable=True)
     language = Column(String, default="en")       # "en" | "mk"
     notifications = Column(Boolean, default=True)
+    disabled_institutions = Column(String, default="")   # comma-separated slugs
     created_at = Column(DateTime(timezone=True), server_default=func.now())

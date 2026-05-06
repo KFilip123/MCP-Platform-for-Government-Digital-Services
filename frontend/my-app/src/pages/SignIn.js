@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+
 import { login, register } from "../api/auth";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -99,6 +100,15 @@ export default function SignIn() {
             >
               {loading ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
             </button>
+
+            {mode === "login" && (
+              <Link
+                to="/forgot-password"
+                className="block text-center text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              >
+                Forgot your password?
+              </Link>
+            )}
           </form>
         </div>
       </div>
