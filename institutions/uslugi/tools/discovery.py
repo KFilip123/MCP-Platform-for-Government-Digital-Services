@@ -1,15 +1,25 @@
 import re
 import requests
+from pathlib import Path
 
 BASE_URL = "https://uslugi.gov.mk/Services"
 HEADERS = {"Content-Type": "application/json;charset=UTF-8", "from-angular": "true"}
+
+SERVICES_LIST_PATH = Path(__file__).parent.parent / "services_list.txt"
 
 def _clean_html(raw_html: str) -> str:
     if not raw_html: return ""
     return re.sub(r"<[^>]+>", "", raw_html).strip()
 
+def list_all_services() -> str:
+    """Return the full list of all services as a plain text string."""
+    return SERVICES_LIST_PATH.read_text(encoding="utf-8")
+
 def search_portal(query: str) -> list[dict]:
-    """Search for services or groups by keyword."""
+    """Search for services or groups by keyword. Query must be in Macedonian Cyrillic.
+    IMPORTANT: If the result is empty or does not match what the user asked for,
+    you MUST call list_all_services() next. NEVER tell the user a service is
+    unavailable or unsupported without first calling list_all_services()."""
     payload = {
         "searchModel": {
             "CurrentPage": 1, "MaxSize": 10, "ItemsPerPage": 10,

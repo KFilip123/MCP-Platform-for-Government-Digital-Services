@@ -33,7 +33,8 @@ from institutions.uslugi.tools.session_tools import (
 from institutions.uslugi.tools.discovery import (
     search_portal as _search,
     get_group_contents as _get_group,
-    get_service_details as _get_details
+    get_service_details as _get_details,
+    list_all_services as _list_all_services,
 )
 # from institutions.uslugi.tools.mvr_info import (
 #     info_mvr_passport_renewal,
@@ -181,19 +182,19 @@ def check_session() -> dict:
 # These do not require authentication.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@mcp.tool()
-def info_passport_renewal() -> dict:
-    """
-    Fetch detailed information about the passport renewal service (ID 5200)
-    from uslugi.gov.mk.
-
-    No login required — this endpoint is publicly accessible.
-
-    Returns a dict with:
-        name, description, requirements, conditions, deadlines,
-        delivery_in, delivery_out, contact, applyUrl.
-    """
-    return _info_passport_renewal()
+# @mcp.tool()
+# def info_passport_renewal() -> dict:
+#     """
+#     Fetch detailed information about the passport renewal service (ID 5200)
+#     from uslugi.gov.mk.
+#
+#     No login required — this endpoint is publicly accessible.
+#
+#     Returns a dict with:
+#         name, description, requirements, conditions, deadlines,
+#         delivery_in, delivery_out, contact, applyUrl.
+#     """
+#     return _info_passport_renewal()
 
 
 @mcp.tool()
@@ -212,6 +213,16 @@ def get_group_contents(group_id: int) -> list[dict]:
     Call this when search_services indicates a result is a group.
     """
     return _get_group(group_id)
+
+@mcp.tool()
+def list_all_services() -> str:
+    """
+    Returns the full list of all 1004 services on uslugi.gov.mk as plain text.
+    Each line is: ID — service name (in Macedonian Cyrillic).
+    Call this when search_services returns no relevant results, then pick the
+    correct service ID and call get_service_requirements(id) directly.
+    """
+    return _list_all_services()
 
 @mcp.tool()
 def get_service_requirements(service_id: int) -> dict:

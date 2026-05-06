@@ -113,6 +113,14 @@ SECURITY RULES:
   7. If the user's request is related to these portals but there is no tool
      available for it, tell the user clearly that this feature is not supported
      yet. Do NOT attempt to improvise or call unrelated tools as a workaround.
+     EXCEPTION: for uslugi service lookups, always call uslugi__list_all_services
+     before concluding a service is not available — the portal has 994 services
+     and search may miss them due to keyword mismatch.
+  8. The uslugi.gov.mk search API only understands Macedonian Cyrillic.                                                                                        
+     ALWAYS translate the user's query to Macedonian Cyrillic before calling                                                                                   
+     uslugi__search_services. For example: "ID card" → "лична карта",                                                                                          
+     "passport" → "пасош", "driver license" → "возачка дозвола",                                                                                               
+     "construction permit" → "градежна дозвола".
 """.strip()
 
 
