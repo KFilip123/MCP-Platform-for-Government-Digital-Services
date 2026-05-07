@@ -74,7 +74,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 # ── Institution registry ──────────────────────────────────────────────────────
 # Loaded once at module import so the config is available before async starts.
 _config_path = Path(__file__).parent / "config.yaml"
-with open(_config_path) as _f:
+with open(_config_path, encoding="utf-8") as _f:
     _gateway_config: dict = yaml.safe_load(_f)
 
 
