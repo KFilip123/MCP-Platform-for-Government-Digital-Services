@@ -4,6 +4,7 @@
 # ── Encrypted session storage ────────────────────────────────────────────────
 # The file contains encrypted cookies – still sensitive, keep out of VCS.
 storage/session.enc
+storage/av_session.enc
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

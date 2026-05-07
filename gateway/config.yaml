@@ -42,3 +42,10 @@ institutions:
     args:
       - "-m"
       - "institutions.mojtermin.main"
+
+  - slug: agencijaZaVrabotuvanje
+    name: "e-rabota.av.gov.mk"
+    command: python
+    args:
+      - "-m"
+      - "institutions.agencijaZaVrabotuvanje.main"
