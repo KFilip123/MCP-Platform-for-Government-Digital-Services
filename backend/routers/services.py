@@ -22,20 +22,26 @@ INSTITUTIONS = [
     {
         "slug": "uslugi",
         "name": "uslugi.gov.mk",
-        "description": "Main public services portal for administrative procedures — passports, ID cards, licenses, and more.",
+        "description": "Главен портал за административни постапки — пасоши, лични карти, возачки дозволи и повеќе.",
         "url": "https://uslugi.gov.mk",
     },
     {
         "slug": "mojtermin",
-        "name": "mojtermin.mk",
-        "description": "Government medical appointment booking system — find doctors, check slots, book appointments.",
+        "name": "Мој Термин",
+        "description": "Систем за закажување медицински прегледи — пронајдете лекари, проверете слободни термини и закажете посета.",
         "url": "https://mojtermin.mk",
     },
     {
         "slug": "crm",
-        "name": "crm.com.mk",
-        "description": "Central Registry of North Macedonia — company registration and business services.",
+        "name": "Централен регистар",
+        "description": "Централен регистар на Северна Македонија — регистрација на компании и деловни услуги.",
         "url": "https://crm.com.mk",
+    },
+    {
+        "slug": "mon",
+        "name": "Министерство за образование",
+        "description": "Портал за образовни услуги — пријавување документи, барања и услуги за ученици и студенти.",
+        "url": "https://e-uslugi.mon.gov.mk",
     },
 ]
 

@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Assistant from "./pages/Assistant";
 import Services from "./pages/Services";
 import Activity from "./pages/Activity";
+import Chats from "./pages/Chats";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/assistant" element={<Assistant />} />
+              <Route path="/chats" element={<Chats />} />
               <Route path="/services" element={<Services />} />
               <Route path="/activity" element={<Activity />} />
               <Route path="/settings" element={<Settings />} />

@@ -2,7 +2,8 @@
   "nav": {
     "dashboard": "Dashboard",
     "assistant": "AI Assistant",
-    "services": "Services",
+    "chats": "Chats",
+    "services": "Institutions",
     "activity": "Activity",
     "settings": "Settings"
   },
@@ -20,9 +21,11 @@
     "goodEvening": "Good evening",
     "subtitle": "Here's what you can do today.",
     "quickActions": "Quick Actions",
+    "connectedServices": "Institutions",
     "recentActivity": "Recent Activity",
     "viewAll": "View all",
-    "noActivity": "No activity yet. Start by asking the AI Assistant!",
+    "noActivity": "No recent activity.",
+    "noActivityHint": "Start by asking the AI Assistant for help.",
     "service": "Service",
     "action": "Action",
     "status": "Status",
@@ -32,15 +35,15 @@
       "bookAppointmentDesc": "Schedule a medical appointment",
       "checkDocuments": "Check Documents",
       "checkDocumentsDesc": "Passport, ID, driving license",
-      "submitRequest": "Submit Request",
-      "submitRequestDesc": "Start a government procedure",
-      "checkTax": "Check Tax Status",
-      "checkTaxDesc": "View your tax obligations"
+      "chats": "Chats",
+      "chatsDesc": "View your chat history",
+      "myActivity": "My Activity",
+      "myActivityDesc": "View your request history"
     }
   },
   "assistant": {
     "title": "AI Assistant",
-    "subtitle": "Powered by GPT-4o Mini · Macedonian Government Services",
+    "subtitle": "Powered by GPT-4o Mini · Digital Government Services",
     "newChat": "New chat",
     "emptyHeading": "How can I help you today?",
     "emptySubtitle": "Ask me anything about Macedonian government services — passport renewal, medical appointments, vehicle registration, and more.",
@@ -65,18 +68,19 @@
     }
   },
   "services": {
-    "title": "Services",
+    "title": "Institutions",
     "subtitle": "Connected government platforms. Disconnected services are hidden from the AI assistant.",
     "loading": "Loading...",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "connect": "Connect",
     "disconnect": "Disconnect",
-    "moreDetails": "More Details"
+    "moreDetails": "More Details",
+    "availableServices": "Services:"
   },
   "activity": {
     "title": "Activity History",
-    "subtitle": "All your interactions with government services.",
+    "subtitle": "Overview of all your requests and activity.",
     "noActivity": "No activity found.",
     "total": "total",
     "service": "Service",
@@ -143,7 +147,7 @@
     "fullName": "Full Name",
     "pleaseWait": "Please wait…",
     "forgotPassword": "Forgot your password?",
-    "subtitle": "Macedonian Digital Government Services"
+    "subtitle": "Digital Government Services"
   },
   "forgotPassword": {
     "title": "Forgot your password?",
