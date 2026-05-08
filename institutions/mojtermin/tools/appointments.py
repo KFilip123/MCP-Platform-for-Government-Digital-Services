@@ -20,6 +20,8 @@ import requests
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+from institutions.shared.errors import tool_error
+
 
 # ── Shared helpers (used by all tool modules) ─────────────────────────────────
 
@@ -72,7 +74,7 @@ def _get(path: str):
         r = requests.get(
             url,
             headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
-            timeout=10,
+            timeout=15,
         )
         r.raise_for_status()
         return r.json()
@@ -157,7 +159,10 @@ def get_locations() -> dict:
     Returns a dict keyed by location ID, each value containing location metadata
     (name, address, etc.) as returned by the API.
     """
-    return _cached("locations", "/api/pp/locations")
+    try:
+        return _cached("locations", "/api/pp/locations")
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
 
 
 def get_location_by_name(name: str) -> dict | None:
@@ -169,39 +174,48 @@ def get_location_by_name(name: str) -> dict | None:
         name: Partial or full location name to search for, e.g. "СТРУГА" or "STRUGA".
 
     Returns:
-        The location dict if found, or None if no match.
+        The location dict if found, None if no match, or an error dict on failure.
     """
+    data = get_locations()
+    if isinstance(data, dict) and data.get("error"):
+        return data
     pattern = _pat(name)
     return next(
-        (loc for loc in get_locations().values() if pattern.search(normalize(loc["name"]))),
+        (loc for loc in data.values() if pattern.search(normalize(loc["name"]))),
         None,
     )
 
 
-def get_specialties() -> list[str]:
+def get_specialties() -> list | dict:
     """
     Return a list of all medical specialties available on mojtermin.mk.
 
     Traverses the portal's side-navigation tree and collects every node
     whose type is "specialty".
     """
-    return [n["name"] for n in _flat() if n.get("type") == "specialty"]
+    try:
+        return [n["name"] for n in _flat() if n.get("type") == "specialty"]
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
 
 
-def get_doctors() -> list[str]:
+def get_doctors() -> list | dict:
     """
     Return a sorted, deduplicated list of all doctor names across the entire portal.
 
     Identifies doctors using the is_doctor() heuristic: resource nodes whose
     names are 2-3 fully uppercase words.
     """
-    return sorted({
-        n["name"] for n in _flat()
-        if n.get("type") == "resource" and is_doctor(n["name"])
-    })
+    try:
+        return sorted({
+            n["name"] for n in _flat()
+            if n.get("type") == "resource" and is_doctor(n["name"])
+        })
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
 
 
-def get_doctors_by_city(city_name: str) -> list[dict]:
+def get_doctors_by_city(city_name: str) -> list | dict:
     """
     Return all doctors in a given city, along with their clinic name.
 
@@ -213,9 +227,13 @@ def get_doctors_by_city(city_name: str) -> list[dict]:
         List of dicts, each with keys: "doctor", "clinic", "city".
         Sorted alphabetically by doctor name.
     """
+    try:
+        flat = _flat()
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
     pattern = _pat(city_name)
     results = []
-    for node in _flat():
+    for node in flat:
         if node.get("type") != "location" or not pattern.search(normalize(node["name"])):
             continue
         for clinic in node.get("subsections", []):
@@ -241,15 +259,17 @@ def get_available_appointments_by_name(city: str, doctor_name: str, date: str) -
 
     Returns:
         Dict with keys "doctor", "date", "available_slots" (list of "HH:MM" strings),
-        or the string "Doctor not found" if no match.
+        or an error dict on failure.
     """
+    try:
+        flat = _flat()
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
     city_pat = _pat(city)
     doc_pat = _pat(doctor_name)
-
     doctor_id = None
     found_doctor = None
-
-    for node in _flat():
+    for node in flat:
         if node.get("type") != "location" or not city_pat.search(normalize(node["name"])):
             continue
         for clinic in node.get("subsections", []):
@@ -262,17 +282,17 @@ def get_available_appointments_by_name(city: str, doctor_name: str, date: str) -
                 break
         if doctor_id:
             break
-
     if not doctor_id:
-        return "Doctor not found"
-
-    slots_data = _get(f"/api/pp/resources/{doctor_id}/slots_availability")
-
-    available = [
-        s["time"] for s in _parse_slots(slots_data)
-        if s["date"] == date
-    ]
-
+        return tool_error(
+            "not_found",
+            f"No doctor matching '{doctor_name}' was found in '{city}'. "
+            "Try calling get_doctors_by_city() to see available doctors.",
+        )
+    try:
+        slots_data = _get(f"/api/pp/resources/{doctor_id}/slots_availability")
+    except MojTerminError as e:
+        return tool_error("network_error", str(e))
+    available = [s["time"] for s in _parse_slots(slots_data) if s["date"] == date]
     return {
         "doctor": found_doctor,
         "date": date,
