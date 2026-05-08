@@ -1,125 +1,284 @@
-# uslugi.gov.mk MCP Demo
+# MCP Platform for Government Digital Services
 
-A demo MCP (Model Context Protocol) server that authenticates with the
-Macedonian public services portal and exposes portal actions as tools that
-a Gemini Flash agent can call.
+A full-stack web application that lets Macedonian citizens interact with government online portals through a conversational AI assistant. Built with FastAPI, React, and the Model Context Protocol (MCP).
+
+---
+
+## What It Does
+
+Users log in to the web app, then chat with an AI assistant (powered by Google Gemini Flash) that can look up information and take actions on government portals on their behalf — passport renewal info, doctor appointments, pharmacist licensing, vehicle registration, and more.
+
+The AI has no direct access to the portals. Instead, it calls **MCP tools** — structured functions that talk to each institution's API — and summarises the results in plain language.
 
 ---
 
 ## Architecture
 
 ```
-User (terminal)
-     |
-     | natural language
-     v
-agent/gemini_agent.py  (Gemini Flash conversation loop)
-  - Holds conversation history
-  - Converts MCP tool schemas to Gemini FunctionDeclarations
-  - Executes Gemini tool call decisions via the MCP client
-     |
-     | MCP JSON-RPC over stdio
-     v
-server/main.py  (FastMCP server)
-  Tools: login, logout, check_session,
-         info_passport_renewal,
-         authenticated_get, authenticated_post
-     |              |
-     v              v
-server/auth/    server/client/http_client.py
-  browser_auth    Loads cookies, injects on every
-  http_auth       request, detects 401/403/redirect
-  session.py      and raises SessionExpiredError
-  (Fernet-encrypted cookie storage)
+Browser (React :3000)
+    │  HTTP REST + JWT
+    ▼
+FastAPI (:8000)
+    ├── /api/auth/*       — register, login, me
+    ├── /api/chat/*       — send message, session history
+    ├── /api/services/*   — list connected services
+    ├── /api/activity/*   — paginated tool-call log
+    └── /api/settings/*   — user profile & preferences
+    │  in-process async call
+    ▼
+ChatService  (singleton, lives for the lifetime of the FastAPI process)
+    │  MCP JSON-RPC over stdio
+    ▼
+gateway/main.py  (aggregates all institutions under namespaced tool names)
+    │                          │
+    ▼                          ▼
+institutions/uslugi/       institutions/mojtermin/
+main.py (88 tools)         main.py (6 tools)
 ```
+
+Each institution server is a **FastMCP** process. The gateway spawns them as subprocesses on startup and multiplexes their tools under a `institutionname__toolname` namespace (e.g. `uslugi__mvr_info_passport_renewal`, `mojtermin__get_doctors_by_city`).
 
 ---
 
 ## Folder Structure
 
 ```
-demo-mcp/
+MCP-Platform-for-Government-Digital-Services/
+│
+├── backend/                        # FastAPI application
+│   ├── main.py                     # App entry point, lifespan, CORS
+│   ├── config.py                   # Settings from .env (API key, JWT secret, DB path)
+│   ├── database.py                 # SQLAlchemy engine + get_db() dependency
+│   ├── dependencies.py             # get_current_user() JWT dependency
+│   ├── models/
+│   │   ├── user.py                 # User table (email, hashed_password, preferences)
+│   │   ├── chat.py                 # ChatSession + Message tables
+│   │   └── activity.py            # ActivityLog table (one row per tool call)
+│   ├── schemas/                    # Pydantic request/response schemas
+│   ├── services/
+│   │   ├── auth_service.py         # bcrypt hashing + JWT creation/decoding
+│   │   └── chat_service.py         # ChatService singleton — owns the gateway subprocess
+│   └── routers/
+│       ├── auth.py                 # POST /api/auth/register, login, GET /api/auth/me
+│       ├── chat.py                 # POST /api/chat, GET /api/chat/sessions
+│       ├── services.py             # GET /api/services (static catalogue)
+│       ├── activity.py             # GET /api/activity (paginated, filterable)
+│       └── settings.py            # GET/PATCH /api/settings
+│
+├── gateway/
+│   └── main.py                     # MCP aggregator — spawns institution subprocesses,
+│                                   # namespaces their tools, routes calls
+│
+├── institutions/                   # One folder per connected institution
+│   ├── uslugi/                     # uslugi.gov.mk — main government services portal
+│   │   ├── main.py                 # FastMCP server, registers all uslugi tools
+│   │   ├── config.py
+│   │   ├── auth/                   # Browser-based login (Playwright), session storage
+│   │   ├── client/                 # Authenticated HTTP client
+│   │   └── tools/
+│   │       ├── session_tools.py    # login, logout, check_session
+│   │       ├── portal_tools.py     # info_passport_renewal (authenticated fetch)
+│   │       ├── mvr_info.py         # 46 MVR public-info tools (no login needed)
+│   │       └── fk_info.py          # 17 Pharmacists Chamber public-info tools
+│   │
+│   └── mojtermin/                  # mojtermin.mk — government appointment booking
+│       ├── main.py                 # FastMCP server, registers all mojtermin tools
+│       └── tools/
+│           └── appointments.py     # get_locations, get_doctors, get_available_appointments …
+│
 ├── agent/
-│   └── gemini_agent.py      # Gemini Flash + MCP client conversation loop
-├── server/
-│   ├── main.py              # FastMCP server — registers all tools
-│   ├── config.py            # All env-var loading in one place
-│   ├── auth/
-│   │   ├── browser_auth.py  # Playwright browser login (primary strategy)
-│   │   ├── http_auth.py     # HTTP POST login (fallback skeleton)
-│   │   └── session.py       # Fernet-encrypted cookie persistence
-│   ├── client/
-│   │   └── http_client.py   # Authenticated requests + session expiry detection
-│   └── tools/
-│       ├── passport.py      # info_passport_renewal() tool
-│       └── session_tools.py # login / logout / check_session tools
+│   └── gemini_agent.py             # Original CLI agent (still works standalone)
+│
+├── frontend/my-app/                # React application
+│   └── src/
+│       ├── api/                    # axios client + per-endpoint API modules
+│       ├── contexts/AuthContext.js # JWT storage, login/logout
+│       ├── hooks/useChat.js        # Chat state management
+│       ├── components/
+│       │   ├── layout/             # Sidebar, TopBar, ProtectedRoute, AppLayout
+│       │   └── chat/               # MessageBubble, ChatInput, SuggestedQuestions
+│       └── pages/
+│           ├── SignIn.js           # Screen 1 — email + password
+│           ├── Dashboard.js        # Screen 2 — quick actions, recent activity
+│           ├── Assistant.js        # Screen 3 — chat interface
+│           ├── Services.js         # Screen 4 — services catalogue by category
+│           ├── Activity.js         # Screen 5 — paginated tool-call history
+│           └── Settings.js         # Screen 6 — profile, language, notifications
+│
 ├── storage/
-│   └── session.enc          # Encrypted cookies (gitignored, auto-created)
-├── .env                     # Secrets (gitignored — copy from .env.example)
-├── .env.example             # Template for .env
-├── .gitignore
-├── requirements.txt
-└── README.md
+│   └── app.db                      # SQLite database (auto-created, gitignored)
+│
+├── .env                            # Secrets — copy from .env.example
+├── .env.example
+└── requirements.txt
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Create a virtual environment and install dependencies
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- A free [Google AI Studio](https://aistudio.google.com) API key
+
+### 1. Clone and install Python dependencies
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+python -m playwright install chromium
 ```
 
-### 2. Install Playwright's Chromium browser
-
-```bash
-playwright install chromium
-```
-
-### 3. Set up environment variables
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and check the values. Most defaults are fine for the demo.
-`COOKIE_ENCRYPTION_KEY` can be left blank — it will be auto-generated and
-printed to the console on first run.  Copy the printed key back into `.env`
-so it persists across restarts.
+Open `.env` and set:
 
-### 4. Run the agent
-
-```bash
-python agent/gemini_agent.py
+```env
+GEMINI_API_KEY=your_key_here
+JWT_SECRET=any_long_random_string
 ```
 
-The agent will:
-1. Spawn `server/main.py` as a subprocess (the MCP server).
-2. Connect to it over stdio.
-3. Start a terminal chat loop powered by Gemini Flash.
+### 3. Start the backend
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+On startup the backend will:
+- Create `storage/app.db` with all tables
+- Spawn the gateway subprocess
+- Connect to all institution MCP servers
+- Print how many tools are available
+
+### 4. Start the frontend
+
+```bash
+cd frontend/my-app
+npm install
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000), register an account, and start chatting.
 
 ---
 
-## Example Session
+## How the AI Handles Conversations
+
+1. The user sends a message via the React chat UI.
+2. FastAPI passes it to `ChatService.chat()`, which holds the full conversation history per user.
+3. The history + all tool schemas are sent to Gemini Flash.
+4. Gemini decides which tool to call (if any) and returns a `function_call`.
+5. The service calls the tool via the MCP gateway, which routes it to the right institution server.
+6. The tool result is added to the history and sent back to Gemini.
+7. Steps 4–6 repeat until Gemini produces a plain-text final answer.
+8. The answer, the session, and an activity log entry are saved to the database.
+
+---
+
+## Adding a New Institution
+
+### 1. Create the institution folder
 
 ```
-You: log me in
+institutions/
+└── myinstitution/
+    ├── __init__.py
+    ├── main.py          ← FastMCP server
+    └── tools/
+        ├── __init__.py
+        └── my_tools.py  ← your tool functions
+```
 
-  [Tool call] login({"strategy": "browser"})
-  # A Chromium window opens. You log in manually. Window closes.
-  [Tool result] {"success": true, "message": "Browser authentication successful..."}
-Assistant: You are now logged in.
+### 2. Write your tools
 
-You: What documents do I need to renew my passport?
+```python
+# institutions/myinstitution/tools/my_tools.py
 
-  [Tool call] info_passport_renewal({})
-  [Tool result] {"serviceId": 5200, "name": "...", "requirements": [...]}
+def get_something(param: str) -> dict:
+    """Description that Gemini will read to decide when to call this tool."""
+    # Call your institution's API here
+    return {"result": "..."}
+```
 
-Assistant: To renew your Macedonian passport you will need ...
+Keep tool functions simple and synchronous. Return a plain dict or string. The gateway and ChatService handle all the MCP/async plumbing.
+
+### 3. Register tools in main.py
+
+```python
+# institutions/myinstitution/main.py
+from fastmcp import FastMCP
+from institutions.myinstitution.tools.my_tools import get_something
+
+mcp = FastMCP("myinstitution")
+
+@mcp.tool()
+def get_something_tool(param: str) -> dict:
+    """Description Gemini will use."""
+    return get_something(param)
+
+if __name__ == "__main__":
+    mcp.run()
+```
+
+### 4. Register the institution in the gateway
+
+Open [`gateway/main.py`](gateway/main.py) and add your institution to the `INSTITUTIONS` list:
+
+```python
+INSTITUTIONS = [
+    {"name": "uslugi.gov.mk",    "key": "uslugi",        "module": "institutions.uslugi.main"},
+    {"name": "mojtermin.mk",     "key": "mojtermin",     "module": "institutions.mojtermin.main"},
+    {"name": "myinstitution.mk", "key": "myinstitution", "module": "institutions.myinstitution.main"},  # ← add this
+]
+```
+
+The `key` becomes the tool name prefix (e.g. `myinstitution__get_something`).
+
+### 5. Update the services catalogue (optional)
+
+Open [`backend/routers/services.py`](backend/routers/services.py) and add your institution's tools to the catalogue so they appear on the Services page in the UI.
+
+That's all. Restart the backend — the gateway will pick up the new institution automatically.
+
+---
+
+## Adding Tools to an Existing Institution
+
+For **uslugi.gov.mk**, add a new file under `institutions/uslugi/tools/` and import it in `institutions/uslugi/main.py`.
+
+**Public-info tools** (no login needed) follow the pattern in [`mvr_info.py`](institutions/uslugi/tools/mvr_info.py):
+
+```python
+def _build_info(service_id: int) -> dict:
+    import requests
+    resp = requests.post(
+        "https://uslugi.gov.mk/api/Services/GetServiceDetails",
+        json={"serviceId": service_id},
+        timeout=15,
+    )
+    return resp.json()
+
+def mvr_info_my_new_service() -> dict:
+    """What documents are needed for my new service."""
+    return _build_info(9999)  # replace with real service ID
+```
+
+**Authenticated tools** (require login) follow the pattern in [`portal_tools.py`](institutions/uslugi/tools/portal_tools.py) — use the shared `authenticated_client` which injects the stored session cookies automatically.
+
+Then register in `institutions/uslugi/main.py`:
+
+```python
+from institutions.uslugi.tools.my_new_file import mvr_info_my_new_service
+
+@mcp.tool()
+def mvr_info_my_new_service_tool() -> dict:
+    """What documents are needed for my new service."""
+    return mvr_info_my_new_service()
 ```
 
 ---
@@ -128,29 +287,23 @@ Assistant: To renew your Macedonian passport you will need ...
 
 | Concern | How it is handled |
 |---|---|
-| Credentials never reach the LLM | Browser strategy: user types in browser window only. HTTP strategy: getpass() reads from terminal, never forwarded to Gemini. |
-| Cookies never returned to LLM | Tool responses contain only structured result dicts, never raw cookie values. |
-| Cookies never stored in plaintext | Fernet symmetric encryption before writing to disk. |
-| Session expiry handled gracefully | AuthenticatedClient detects 401/403/login-redirect and raises SessionExpiredError, which tools convert to a clear error message. |
-| Encryption key not hardcoded | Loaded from COOKIE_ENCRYPTION_KEY env var; auto-generated on first run. |
+| User passwords | Hashed with bcrypt before storage, never stored in plaintext |
+| Session tokens | JWT signed with `JWT_SECRET`, stored in browser localStorage |
+| Portal credentials | User types them in a Playwright browser window — never seen by the AI or stored |
+| Portal cookies | Fernet-encrypted before writing to disk |
+| AI tool results | Tools return structured dicts only — raw cookies and tokens are never forwarded to Gemini |
+| Protected routes | All `/api/*` endpoints (except auth) require a valid JWT |
 
 ---
 
-## Extending the Project
+## Tech Stack
 
-### Add a new tool
-
-1. Create `server/tools/my_tool.py` with a plain function.
-2. For authenticated endpoints, call `authenticated_client.post(...)` from `server/client/http_client.py`.
-3. Import the function in `server/main.py` and register it with `@mcp.tool()`.
-
-### Switch to a different portal
-
-1. Update `PORTAL_BASE_URL`, `LOGIN_URL`, `POST_LOGIN_PATH` in `server/config.py` (or `.env`).
-2. If HTTP login is possible, adjust the endpoint and field names in `server/auth/http_auth.py`.
-
-### Add persistent login for CI / automation
-
-For headless scenarios where a real browser is impractical:
-1. Implement a headless Playwright flow in `browser_auth.py` for portals without CAPTCHA.
-2. Or inject cookies exported from a real browser session manually via `session_manager.save({...})`.
+| Layer | Technology |
+|---|---|
+| AI model | Google Gemini 2.5 Flash (free tier) |
+| Tool protocol | Model Context Protocol (MCP) over stdio |
+| Backend | FastAPI + SQLAlchemy + SQLite |
+| Auth | JWT (python-jose) + bcrypt |
+| Frontend | React + React Router v6 + Tailwind CSS v3 |
+| HTTP client | axios with JWT interceptor |
+| Browser automation | Playwright (Chromium) |

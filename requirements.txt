@@ -12,7 +12,9 @@ playwright
 # ── HTTP client (tool requests and http-based auth fallback) ─────────────────
 requests
 
-# ── Google Gemini SDK (new "google-genai" package, NOT google-generativeai) ──
+# ── LLM SDKs ─────────────────────────────────────────────────────────────────
+# Install both so any team member can switch provider via LLM_PROVIDER in .env
+openai
 google-genai
 
 # ── Environment variable loading (.env file support) ─────────────────────────
@@ -32,3 +34,22 @@ selenium
 
 # ── HTML parsing (BeautifulSoup) ─────────────────────────────────────────────
 beautifulsoup4
+# ── FastAPI web framework + server ───────────────────────────────────────────
+fastapi
+uvicorn[standard]
+
+# ── Database (SQLite via SQLAlchemy) ─────────────────────────────────────────
+sqlalchemy
+
+# ── Settings management ───────────────────────────────────────────────────────
+pydantic-settings
+
+# ── JWT authentication ────────────────────────────────────────────────────────
+python-jose[cryptography]
+passlib[bcrypt]
+
+# ── Form data support (required by FastAPI for multipart) ────────────────────
+python-multipart
+
+# ── Email validation (used by Pydantic EmailStr) ─────────────────────────────
+email-validator

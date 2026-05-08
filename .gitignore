@@ -4,7 +4,8 @@
 # ── Encrypted session storage ────────────────────────────────────────────────
 # The file contains encrypted cookies – still sensitive, keep out of VCS.
 storage/session.enc
-storage/av_session.enc
+# All .enc files under storage/ contain encrypted tokens – keep out of VCS.
+storage/*.enc
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
@@ -27,5 +28,16 @@ env/
 # Downloaded via: playwright install chromium
 # No need to commit them.
 
+# ── Claude Code workspace ────────────────────────────────────────────────────
+.claude/
+
+# ── Test/debug artifacts ──────────────────────────────────────────────────────
+crm_detail.png
+
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
