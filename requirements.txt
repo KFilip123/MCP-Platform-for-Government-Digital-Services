@@ -26,3 +26,9 @@ cryptography
 # ── YAML parser — used by the gateway to read gateway/config.yaml ────────────
 # PyYAML is the standard Python YAML library.
 PyYAML
+
+# ── Selenium browser automation ───────────────────────────────────────────────
+selenium
+
+# ── HTML parsing (BeautifulSoup) ─────────────────────────────────────────────
+beautifulsoup4

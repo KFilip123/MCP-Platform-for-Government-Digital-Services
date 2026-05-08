@@ -27,6 +27,7 @@ def get_driver():
 # Returns a list of job ads
 def viewJobs(page: int = 1) -> dict:
     driver = get_driver()
+    current_page = 1
 
     try:
         driver.get(OGLASI_URL)
@@ -44,16 +45,20 @@ def viewJobs(page: int = 1) -> dict:
                     )
                     next_button.find_element(By.XPATH, "..").click()
                     time.sleep(2)
+                    current_page += 1
                 except Exception:
                     break
 
         html = driver.page_source
+        total_pages = parse_total_pages(html)
 
         return {
             "success": True,
             "oglasi": parse_oglasi(html),
-            "total_pages": parse_total_pages(html),
-            "current_page": page,
+            "total_pages": total_pages,
+            "current_page": current_page,
+            "requested_page": page,
+            "page_reached": current_page == page,
         }
 
     except Exception as e:
@@ -62,7 +67,9 @@ def viewJobs(page: int = 1) -> dict:
             "error": str(e),
             "oglasi": [],
             "total_pages": 0,
-            "current_page": page,
+            "current_page": current_page,
+            "requested_page": page,
+            "page_reached": False,
         }
 
     finally:
@@ -76,6 +83,7 @@ def searchJobs(
     page: int = 1,
 ) -> dict:
     driver = get_driver()
+    current_page = 1
 
     try:
         driver.get(OGLASI_URL)
@@ -126,16 +134,20 @@ def searchJobs(
                     )
                     next_button.find_element(By.XPATH, "..").click()
                     time.sleep(2)
+                    current_page += 1
                 except Exception:
                     break
 
         html = driver.page_source
+        total_pages = parse_total_pages(html)
 
         return {
             "success": True,
             "oglasi": parse_oglasi(html),
-            "total_pages": parse_total_pages(html),
-            "current_page": page,
+            "total_pages": total_pages,
+            "current_page": current_page,
+            "requested_page": page,
+            "page_reached": current_page == page,
             "filter": {
                 "zanimanje": zanimanje,
                 "centar": centar,
@@ -149,7 +161,9 @@ def searchJobs(
             "error": str(e),
             "oglasi": [],
             "total_pages": 0,
-            "current_page": page,
+            "current_page": current_page,
+            "requested_page": page,
+            "page_reached": False,
             "filter": {
                 "zanimanje": zanimanje,
                 "centar": centar,
