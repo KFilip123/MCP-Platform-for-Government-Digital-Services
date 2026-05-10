@@ -25,7 +25,7 @@ def get_driver():
     return webdriver.Chrome(options=options)
 
 # Returns a list of job ads
-def viewJobs(page: int = 1) -> dict:
+def view_jobs(page: int = 1) -> dict:
     driver = get_driver()
     current_page = 1
 
@@ -45,9 +45,9 @@ def viewJobs(page: int = 1) -> dict:
                     )
                     next_button.find_element(By.XPATH, "..").click()
                     time.sleep(2)
-                    current_page += 1
                 except Exception:
                     break
+                current_page += 1
 
         html = driver.page_source
         total_pages = parse_total_pages(html)
@@ -76,7 +76,7 @@ def viewJobs(page: int = 1) -> dict:
         driver.quit()
 
 # Performs filtered job search using occupation, center, and municipality
-def searchJobs(
+def search_jobs(
     zanimanje: str = "",
     centar: str = "",
     opstina: str = "",
@@ -134,9 +134,9 @@ def searchJobs(
                     )
                     next_button.find_element(By.XPATH, "..").click()
                     time.sleep(2)
-                    current_page += 1
                 except Exception:
                     break
+                current_page += 1
 
         html = driver.page_source
         total_pages = parse_total_pages(html)
@@ -175,7 +175,7 @@ def searchJobs(
         driver.quit()
 
 # Retrieves full details for a specific job ad by oglas_id
-def getJobDetails(oglas_id: str) -> dict:
+def get_job_details(oglas_id: str) -> dict:
     driver = get_driver()
 
     try:

@@ -7,21 +7,21 @@ from institutions.agencijaZaVrabotuvanje.auth.session_tools import (
 )
 
 from institutions.agencijaZaVrabotuvanje.tools.public_tools import (
-    viewJobs as _viewJobs,
-    searchJobs as _searchJobs,
-    getJobDetails as _getJobDetails,
+    view_jobs as _view_jobs,
+    search_jobs as _search_jobs,
+    get_job_details as _get_job_details,
 )
 
 from institutions.agencijaZaVrabotuvanje.tools.authenticated_tools import (
-    getUserDashboard as _getUserDashboard,
-    viewCV as _viewCV,
-    downloadCV as _downloadCV,
-    createCV as _createCV,
-    editCV as _editCV,
-    saveJobFavourite as _saveJobFavourite,
-    viewFavouriteJobs as _viewFavouriteJobs,
-    removeFavouriteJob as _removeFavouriteJob,
-    sendJobInvitation as _sendJobInvitation,
+    get_user_dashboard as _get_user_dashboard,
+    view_cv as _view_cv,
+    download_cv as _download_cv,
+    create_cv as _create_cv,
+    edit_cv as _edit_cv,
+    save_job_favourite as _save_job_favourite,
+    view_favourite_jobs as _view_favourite_jobs,
+    remove_favourite_job as _remove_favourite_job,
+    send_job_invitation as _send_job_invitation,
 )
 
 mcp = FastMCP("agencija-za-vrabotuvanje")
@@ -57,15 +57,15 @@ def check_session() -> dict:
 # ─────────────────────────────────────────────
 
 @mcp.tool()
-def viewJobs(page: int = 1) -> dict:
+def view_jobs(page: int = 1) -> dict:
     """
     Returns all active job listings (no filters).
     """
-    return _viewJobs(page=page)
+    return _view_jobs(page=page)
 
 
 @mcp.tool()
-def searchJobs(
+def search_jobs(
     zanimanje: str = "",
     centar: str = "",
     opstina: str = "",
@@ -77,7 +77,7 @@ def searchJobs(
     - employment center (centar)
     - municipality (opstina)
     """
-    return _searchJobs(
+    return _search_jobs(
         zanimanje=zanimanje,
         centar=centar,
         opstina=opstina,
@@ -86,12 +86,12 @@ def searchJobs(
 
 
 @mcp.tool()
-def getJobDetails(oglas_id: str) -> dict:
+def get_job_details(oglas_id: str) -> dict:
     """
     Returns full details for a specific job listing.
     Requires oglas_id (internal job identifier).
     """
-    return _getJobDetails(oglas_id=oglas_id)
+    return _get_job_details(oglas_id=oglas_id)
 
 
 # ─────────────────────────────────────────────
@@ -99,7 +99,7 @@ def getJobDetails(oglas_id: str) -> dict:
 # ─────────────────────────────────────────────
 
 @mcp.tool()
-def getUserDashboard() -> dict:
+def get_user_dashboard() -> dict:
     """
     Returns user dashboard data:
     - CV views
@@ -108,21 +108,21 @@ def getUserDashboard() -> dict:
 
     Requires authentication.
     """
-    return _getUserDashboard()
+    return _get_user_dashboard()
 
 
 @mcp.tool()
-def viewCV() -> dict:
+def view_cv() -> dict:
     """
     Returns all CVs for the logged-in user.
 
     Requires authentication.
     """
-    return _viewCV()
+    return _view_cv()
 
 
 @mcp.tool()
-def downloadCV(cv_id: str = "") -> dict:
+def download_cv(cv_id: str = "") -> dict:
     """
     Downloads a CV.
 
@@ -132,21 +132,21 @@ def downloadCV(cv_id: str = "") -> dict:
 
     Requires authentication.
     """
-    return _downloadCV(cv_id=cv_id or None)
+    return _download_cv(cv_id=cv_id or None)
 
 
 @mcp.tool()
-def createCV(data: dict) -> dict:
+def create_cv(data: dict) -> dict:
     """
     Creates a new CV using provided data.
 
     Requires authentication.
     """
-    return _createCV(data=data)
+    return _create_cv(data=data)
 
 
 @mcp.tool()
-def editCV(cv_id: str = "", data: dict | None = None) -> dict:
+def edit_cv(cv_id: str = "", data: dict | None = None) -> dict:
     """
     Edits an existing CV.
 
@@ -159,7 +159,7 @@ def editCV(cv_id: str = "", data: dict | None = None) -> dict:
 
     Requires authentication.
     """
-    return _editCV(cv_id=cv_id or None, data=data)
+    return _edit_cv(cv_id=cv_id or None, data=data)
 
 
 # ─────────────────────────────────────────────
@@ -167,7 +167,7 @@ def editCV(cv_id: str = "", data: dict | None = None) -> dict:
 # ─────────────────────────────────────────────
 
 @mcp.tool()
-def saveJobFavourite(oglas_id: str, favourite_name: str = "") -> dict:
+def save_job_favourite(oglas_id: str, favourite_name: str = "") -> dict:
     """
     Adds a job listing to user's favourites.
 
@@ -176,34 +176,34 @@ def saveJobFavourite(oglas_id: str, favourite_name: str = "") -> dict:
 
     Requires authentication.
     """
-    return _saveJobFavourite(
+    return _save_job_favourite(
         oglas_id=oglas_id,
         favourite_name=favourite_name or None,
     )
 
 
 @mcp.tool()
-def viewFavouriteJobs() -> dict:
+def view_favourite_jobs() -> dict:
     """
     Returns all favourite job listings for the user.
 
     Requires authentication.
     """
-    return _viewFavouriteJobs()
+    return _view_favourite_jobs()
 
 
 @mcp.tool()
-def removeFavouriteJob(oglas_id: str) -> dict:
+def remove_favourite_job(oglas_id: str) -> dict:
     """
     Removes a job listing from favourites.
 
     Requires authentication.
     """
-    return _removeFavouriteJob(oglas_id=oglas_id)
+    return _remove_favourite_job(oglas_id=oglas_id)
 
 
 @mcp.tool()
-def sendJobInvitation(
+def send_job_invitation(
     oglas_id: str,
     message: str = "",
     show_personal_data: bool = True,
@@ -218,7 +218,7 @@ def sendJobInvitation(
 
     Requires authentication.
     """
-    return _sendJobInvitation(
+    return _send_job_invitation(
         oglas_id=oglas_id,
         message=message,
         show_personal_data=show_personal_data,

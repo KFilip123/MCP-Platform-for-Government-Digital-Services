@@ -2,14 +2,16 @@ import base64
 import time
 from typing import Any
 
-import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from institutions.agencijaZaVrabotuvanje.client import SessionExpiredError
+from institutions.agencijaZaVrabotuvanje.client import (
+    authenticated_client,
+    SessionExpiredError,
+)
 from institutions.agencijaZaVrabotuvanje.config import (
     PORTAL_BASE_URL,
     PROTECTED_HOME_URL,
@@ -57,7 +59,13 @@ def _unexpected_error_response(error: Exception) -> dict:
 
 
 def _normalize_cookies(raw_cookies) -> list[dict]:
-
+    """
+    Normalize cookies for Selenium driver injection.
+    
+    Note: This is kept separate from authenticated_client because Selenium
+    requires a different cookie format (list of dicts with domain/path/expiry)
+    than requests.Session (which uses a simple dict).
+    """
     if not raw_cookies:
         return []
 
@@ -98,6 +106,7 @@ def _normalize_cookies(raw_cookies) -> list[dict]:
 
 
 def _get_session_cookies() -> list[dict]:
+    """Get session cookies in Selenium format."""
     raw_cookies = session_manager.load()
 
     cookies = _normalize_cookies(raw_cookies)
@@ -106,24 +115,6 @@ def _get_session_cookies() -> list[dict]:
         raise SessionExpiredError("No saved session cookies.")
 
     return cookies
-
-
-def _authenticated_get(url: str) -> requests.Response:
-
-    cookies = _get_session_cookies()
-
-    session = requests.Session()
-
-    for cookie in cookies:
-        session.cookies.set(
-            cookie["name"],
-            cookie["value"],
-            domain=cookie.get("domain") or COOKIE_DOMAIN,
-            path=cookie.get("path", "/"),
-        )
-
-    response = session.get(url, allow_redirects=True, timeout=30)
-    return response
 
 
 def _get_driver() -> webdriver.Chrome:
@@ -183,7 +174,7 @@ def _safe_click(driver: webdriver.Chrome, element_id: str) -> bool:
 
 
 def _validate_cv_exists(cv_id: str) -> dict | None:
-    response = _authenticated_get(EDIT_CV_LIST_URL)
+    response = authenticated_client.get(EDIT_CV_LIST_URL)
     html = response.text
     final_url = getattr(response, "url", "")
 
@@ -194,7 +185,7 @@ def _validate_cv_exists(cv_id: str) -> dict | None:
     return next((cv for cv in cvs if str(cv.get("cv_id")) == str(cv_id)), None)
 
 def _select_cv(cv_id: str | None = None) -> tuple[dict | None, dict | None]:
-    response = _authenticated_get(EDIT_CV_LIST_URL)
+    response = authenticated_client.get(EDIT_CV_LIST_URL)
     html = response.text
     final_url = getattr(response, "url", "")
 
@@ -246,9 +237,9 @@ def _select_cv(cv_id: str | None = None) -> tuple[dict | None, dict | None]:
     }
 
 # Retrieves dashboard data for the logged-in user.
-def getUserDashboard() -> dict:
+def get_user_dashboard() -> dict:
     try:
-        response = _authenticated_get(PROTECTED_HOME_URL)
+        response = authenticated_client.get(PROTECTED_HOME_URL)
         html = response.text
         final_url = getattr(response, "url", "")
 
@@ -269,9 +260,9 @@ def getUserDashboard() -> dict:
 
 
 # Returns all CVs belonging to the logged-in user.
-def viewCV() -> dict:
+def view_cv() -> dict:
     try:
-        response = _authenticated_get(EDIT_CV_LIST_URL)
+        response = authenticated_client.get(EDIT_CV_LIST_URL)
         html = response.text
         final_url = getattr(response, "url", "")
 
@@ -295,7 +286,7 @@ def viewCV() -> dict:
 
 
 # Downloads a selected CV, or auto-selects it if only one CV exists.
-def downloadCV(cv_id: str | None = None) -> dict:
+def download_cv(cv_id: str | None = None) -> dict:
     try:
         selected_cv, error = _select_cv(cv_id)
 
@@ -304,7 +295,7 @@ def downloadCV(cv_id: str | None = None) -> dict:
 
         cv_id = selected_cv.get("cv_id")
 
-        response = _authenticated_get(f"{CV_PRINT_URL}?CvId={cv_id}")
+        response = authenticated_client.get(f"{CV_PRINT_URL}?CvId={cv_id}")
         final_url = getattr(response, "url", "")
 
         try:
@@ -342,7 +333,7 @@ def downloadCV(cv_id: str | None = None) -> dict:
 
 
 # Opens or updates an existing CV using the provided data.
-def editCV(cv_id: str | None = None, data: dict | None = None) -> dict:
+def edit_cv(cv_id: str | None = None, data: dict | None = None) -> dict:
     driver = None
 
     try:
@@ -500,7 +491,7 @@ def editCV(cv_id: str | None = None, data: dict | None = None) -> dict:
 
 
 # Creates a new CV through the authenticated browser flow.
-def createCV(data: dict) -> dict:
+def create_cv(data: dict) -> dict:
     driver = None
 
     try:
@@ -622,7 +613,7 @@ def createCV(data: dict) -> dict:
         saved = _safe_click(driver, "MainContent_ASPxPageControl_cv_ButtonZacuvajCv")
         time.sleep(3)
 
-        response = _authenticated_get(EDIT_CV_LIST_URL)
+        response = authenticated_client.get(EDIT_CV_LIST_URL)
         cvs = parse_cv_list(response.text)
 
         return {
@@ -666,7 +657,7 @@ def _open_favourite_jobs_tab(driver: webdriver.Chrome) -> None:
     time.sleep(2)
 
 # Adds a job ad to the user's favourite jobs list.
-def saveJobFavourite(oglas_id: str, favourite_name: str | None = None) -> dict:
+def save_job_favourite(oglas_id: str, favourite_name: str | None = None) -> dict:
     driver = None
 
     try:
@@ -748,7 +739,7 @@ def saveJobFavourite(oglas_id: str, favourite_name: str | None = None) -> dict:
             driver.quit()
 
 # Returns all favourite job ads for the logged-in user.
-def viewFavouriteJobs() -> dict:
+def view_favourite_jobs() -> dict:
     driver = None
 
     try:
@@ -788,7 +779,7 @@ def viewFavouriteJobs() -> dict:
             driver.quit()
 
 # Removes a job ad from the user's favourite jobs list.
-def removeFavouriteJob(oglas_id: str) -> dict:
+def remove_favourite_job(oglas_id: str) -> dict:
     driver = None
 
     try:
@@ -844,7 +835,7 @@ def removeFavouriteJob(oglas_id: str) -> dict:
             driver.quit()
 
 # Sends an invitation/application message for a selected job ad.
-def sendJobInvitation(
+def send_job_invitation(
     oglas_id: str,
     message: str = "",
     show_personal_data: bool = True,
