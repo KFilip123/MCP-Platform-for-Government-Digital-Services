@@ -43,6 +43,13 @@ institutions:
       - "-m"
       - "institutions.mojtermin.main"
 
+  - slug: crm
+    name: "crm.com.mk"
+    command: python
+    args:
+      - "-m"
+      - "institutions.crm.main"
+
   - slug: mon
     name: "Министерство за образование и наука (MON)"
     command: python
