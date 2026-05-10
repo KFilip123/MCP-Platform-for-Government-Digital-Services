@@ -41,3 +41,5 @@ crm_detail.png
 
 # SQLite databases
 *.db
+*.db-shm
+*.db-wal
