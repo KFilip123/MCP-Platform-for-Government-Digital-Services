@@ -132,11 +132,11 @@ python -m playwright install chromium
 ```
 
 If you're running in Linux CI/server environments, also install a browser + driver for Selenium.
-Example for Debian/Ubuntu-based systems:
+Install package names vary by distro; for Debian/Ubuntu use the Chromium + ChromeDriver package names available in your apt repositories:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y chromium-browser chromium-chromedriver
+sudo apt-get install -y chromium chromium-driver
 ```
 
 ### 2. Configure environment variables
