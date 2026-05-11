@@ -11,6 +11,7 @@ it as {"access_token": "..."} so the SessionManager can store it.
 
 import asyncio
 import concurrent.futures
+import sys
 from typing import Optional
 
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
@@ -35,7 +36,8 @@ class MonBrowserAuthenticator:
                 "║    1. Log in with your credentials.                      ║\n"
                 "║    2. Complete any 2FA / eID prompts.                    ║\n"
                 "║    3. The window closes automatically after login.        ║\n"
-                "╚══════════════════════════════════════════════════════════╝\n"
+                "╚══════════════════════════════════════════════════════════╝\n",
+                file=sys.stderr,
             )
 
             await page.goto(LOGIN_URL)
@@ -46,7 +48,7 @@ class MonBrowserAuthenticator:
                     timeout=self._TIMEOUT_S * 1000,
                 )
             except PlaywrightTimeout:
-                print("[MON Auth] Timeout — user did not complete login in time.")
+                print("[MON Auth] Timeout — user did not complete login in time.", file=sys.stderr)
                 await browser.close()
                 return None
 
@@ -55,10 +57,10 @@ class MonBrowserAuthenticator:
             await browser.close()
 
             if not token:
-                print("[MON Auth] Login detected but no access_token found in localStorage.")
+                print("[MON Auth] Login detected but no access_token found in localStorage.", file=sys.stderr)
                 return None
 
-            print("[MON Auth] Login successful. JWT token captured.")
+            print("[MON Auth] Login successful. JWT token captured.", file=sys.stderr)
             return {"access_token": token}
 
     def run(self) -> Optional[dict]:

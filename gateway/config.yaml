@@ -69,9 +69,18 @@ institutions:
       - "If the user mentions a city, call get_doctors_by_city (preferred over get_doctors)."
       - "If no city is mentioned, call get_doctors to list all doctors."
       - "Never call get_doctors AND get_doctors_by_city for the same request."
-      - "Call get_available_appointments_by_name only when the user explicitly wants to book or check slots."
+      - "Call get_available_appointments_by_name only when the user explicitly wants to book or check slots for a specific doctor on a specific date."
+      - "For general slot queries (no specific doctor or date), use get_available_slots, get_slots_range, get_first_available, or get_availability_summary instead."
+      - "Call get_first_available to find the earliest open slot for any resource — no date required."
+      - "Call get_availability_summary to show a day-by-day slot count overview (mini-calendar)."
+      - "Call get_slots_range when the user wants to see slots across a multi-day window."
+      - "Call get_clinics only if the user asks about clinics specifically (not the same as locations)."
+      - "Call get_resources_by_city when the user wants ALL resources (doctors AND institutions) in a city."
+      - "Call search_resources for fuzzy name-based queries across all resource types — supports Latin input (e.g. 'Kardio' matches 'Кардио')."
+      - "Call get_slots_for_city to find available slots across all resources in a city on a given date."
       - "Call get_locations only if the user asks about clinic locations specifically."
       - "Call get_specialties only if the user asks what medical specialties are available."
+      - "All mojtermin tools are public — no login is required."
 
   - slug: crm
     name: "crm.com.mk"
@@ -134,4 +143,25 @@ institutions:
       - "Call get_mon_service_requirements only when the user needs to know what documents to upload."
       - "For document questions (certificates, transcripts, diplomas), use list_mon_document_types and get_mon_document_requirements — these do NOT require login."
       - "Never call list_mon_services and get_mon_service_requirements in the same turn unless you already have the specific service ID."
+
+  - slug: katastar
+    name: "e-uslugi.katastar.gov.mk"
+    command: python
+    args:
+      - "-m"
+      - "institutions.katastar.main"
+    description: >
+      Cadastre (real estate registry) services: authentication, municipality search,
+      parcel lookup, property certificates (имотен лист), building records,
+      parcel geometry, total parcel area, and favorites management.
+      tool_rules:
+      - "Always call login first if the user is not authenticated."
+      - "Call search_municipality to get departmentID and municipalityID before any property query."
+      - "Call find_parcels to list parcels for a given имотен лист number."
+      - "Call find_buildings to list buildings for a given имотен лист number."
+      - "Call get_total_parcel_area to get the total area and document type for a имотен лист."
+      - "Call check_property_favorited only when the user asks about saved/favorite properties."
+      - "Call check_session before authenticated requests to verify session is active."
+      - "Call logout only when the user explicitly asks to log out."
+      - "Translate queries: 'property'→'имот', 'parcel'→'парцела', 'municipality'→'општина', 'building'→'зграда', 'certificate'→'имотен лист'."
 

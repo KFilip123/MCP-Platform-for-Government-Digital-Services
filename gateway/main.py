@@ -86,7 +86,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 # ── Institution registry ──────────────────────────────────────────────────────
 _config_path = Path(__file__).parent / "config.yaml"
-with open(_config_path) as _f:
+with open(_config_path, encoding="utf-8") as _f:
     _gateway_config: dict = yaml.safe_load(_f)
 
 # Timeout for a single institution connection attempt (seconds)
