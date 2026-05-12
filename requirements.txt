@@ -12,9 +12,10 @@ playwright
 # ── HTTP client (tool requests and http-based auth fallback) ─────────────────
 requests
 
-# ── LLM SDKs ─────────────────────────────────────────────────────────────────
-# Install both so any team member can switch provider via LLM_PROVIDER in .env
-openai
+# ── HTML scraping (mon.gov.mk and other government portals) ──────────────────
+beautifulsoup4
+
+# ── Google Gemini SDK (new "google-genai" package, NOT google-generativeai) ──
 google-genai
 
 # ── Environment variable loading (.env file support) ─────────────────────────

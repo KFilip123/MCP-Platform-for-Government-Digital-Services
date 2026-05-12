@@ -1,14 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { getMe } from "../api/auth";
-import i18n from "../i18n";
 
 const AuthContext = createContext(null);
-
-function applyLanguage(user) {
-  const lang = user?.language || "en";
-  localStorage.setItem("language", lang);
-  i18n.changeLanguage(lang);
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -18,7 +11,7 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("access_token");
     if (token) {
       getMe()
-        .then((u) => { setUser(u); applyLanguage(u); })
+        .then(setUser)
         .catch(() => localStorage.removeItem("access_token"))
         .finally(() => setLoading(false));
     } else {
@@ -28,7 +21,7 @@ export function AuthProvider({ children }) {
 
   const login = (token) => {
     localStorage.setItem("access_token", token);
-    return getMe().then((u) => { setUser(u); applyLanguage(u); });
+    return getMe().then(setUser);
   };
 
   const logout = () => {
@@ -37,7 +30,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

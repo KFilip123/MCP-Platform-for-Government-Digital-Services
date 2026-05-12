@@ -11,9 +11,6 @@ class ChatResponse(BaseModel):
     reply: str
     session_id: int
     created_at: datetime
-    # Slugs of portals that returned a structured error during this response
-    # (e.g. ["uslugi", "crm"]).  Empty list = everything worked fine.
-    portal_errors: list[str] = []
 
 
 class MessageOut(BaseModel):
@@ -24,10 +21,6 @@ class MessageOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class SessionUpdate(BaseModel):
-    title: str
 
 
 class SessionOut(BaseModel):

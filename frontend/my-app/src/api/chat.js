@@ -11,6 +11,3 @@ export const getSession = (id) =>
 
 export const deleteSession = (id) =>
   client.delete(`/api/chat/sessions/${id}`);
-
-export const renameSession = (id, title) =>
-  client.patch(`/api/chat/sessions/${id}`, { title }).then((r) => r.data);

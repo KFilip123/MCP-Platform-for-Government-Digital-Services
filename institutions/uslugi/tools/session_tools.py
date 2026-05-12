@@ -15,7 +15,6 @@ Security contract (the LLM must never touch credentials or cookies):
   • Cookies are encrypted on disk and NEVER included in tool return values.
 """
 
-from institutions.shared.errors import tool_error
 from institutions.uslugi.auth.browser_auth import browser_authenticator
 from institutions.uslugi.auth.session import session_manager
 
@@ -33,12 +32,8 @@ def login() -> dict:
             "strategy_used":  str,
             "cookies_saved":  int,
         }
-        or on error: { "error": True, "code": str, "message": str }
     """
-    try:
-        cookies = browser_authenticator.run()
-    except Exception as exc:
-        return tool_error("browser_error", f"Failed to launch the authentication browser: {exc}")
+    cookies = browser_authenticator.run()
 
     if not cookies:
         return {
@@ -48,11 +43,7 @@ def login() -> dict:
             "cookies_saved": 0,
         }
 
-    try:
-        session_manager.save(cookies)
-    except Exception as exc:
-        return tool_error("unexpected_error", f"Authentication succeeded but failed to save session: {exc}")
-
+    session_manager.save(cookies)
     return {
         "success": True,
         "message": "Browser authentication successful. Session saved.",
@@ -67,13 +58,9 @@ def logout() -> dict:
 
     Returns:
         { "success": bool, "message": str }
-        or on error: { "error": True, "code": str, "message": str }
     """
-    try:
-        had_session = session_manager.is_present()
-        session_manager.clear()
-    except Exception as exc:
-        return tool_error("unexpected_error", f"Failed to clear the session: {exc}")
+    had_session = session_manager.is_present()
+    session_manager.clear()
 
     if had_session:
         return {"success": True, "message": "Logged out. Session cookies deleted."}
@@ -86,7 +73,8 @@ def check_session() -> dict:
 
     This is a LOCAL check only — it does not make a network request.
     A session can exist on disk but already be rejected by the server
-    (e.g. after a server-side logout or token expiry).
+    (e.g. after a server-side logout or token expiry).  For a hard check,
+    call authenticated_get on a protected endpoint and watch for errors.
 
     Returns:
         {
@@ -94,13 +82,9 @@ def check_session() -> dict:
             "saved_at": str | None,   # ISO-8601 UTC timestamp of last login
             "message":  str,
         }
-        or on error: { "error": True, "code": str, "message": str }
     """
-    try:
-        active = session_manager.is_present()
-        saved_at = session_manager.saved_at() if active else None
-    except Exception as exc:
-        return tool_error("unexpected_error", f"Failed to read session state: {exc}")
+    active = session_manager.is_present()
+    saved_at = session_manager.saved_at() if active else None
 
     message = (
         f"Session is active (saved at {saved_at})."
@@ -109,3 +93,5 @@ def check_session() -> dict:
     )
 
     return {"active": active, "saved_at": saved_at, "message": message}
+
+
