@@ -437,8 +437,9 @@ class ChatService:
         openai_tools: list[dict],
         user_id: int,
         db,
-    ) -> tuple[str, list[str]]:
+    ) -> tuple[str, list[str], dict | None]:
         portal_errors: list[str] = []
+        geometry: dict | None = None
 
         while True:
             messages_to_send = [{"role": "system", "content": self._system_prompt}] + history
@@ -480,7 +481,7 @@ class ChatService:
             history.append(assistant_dict)
 
             if not assistant_msg.tool_calls:
-                return assistant_msg.content or "", portal_errors
+                return assistant_msg.content or "", portal_errors, geometry
 
             # Execute tool calls
             for tc in assistant_msg.tool_calls:
@@ -508,6 +509,14 @@ class ChatService:
                             service = tool_name.split("__")[0] if "__" in tool_name else None
                             if service and service not in portal_errors:
                                 portal_errors.append(service)
+                        # Capture katastar geometry for mini-map
+                        if (
+                            not is_error
+                            and tool_name == "katastar__search_property"
+                            and isinstance(parsed, dict)
+                            and parsed.get("geometry")
+                        ):
+                            geometry = parsed["geometry"]
                     except (json.JSONDecodeError, TypeError):
                         tool_status = "completed"
                 except Exception as exc:
@@ -541,8 +550,9 @@ class ChatService:
         gemini_tools: list,
         user_id: int,
         db,
-    ) -> tuple[str, list[str]]:
+    ) -> tuple[str, list[str], dict | None]:
         portal_errors: list[str] = []
+        geometry: dict | None = None
 
         while True:
             try:
@@ -587,7 +597,7 @@ class ChatService:
                 final_text = " ".join(
                     part.text for part in content.parts if part.text
                 )
-                return final_text, portal_errors
+                return final_text, portal_errors, geometry
 
             # Execute all tool calls, collect results
             tool_result_parts = []
@@ -613,6 +623,14 @@ class ChatService:
                             service = tool_name.split("__")[0] if "__" in tool_name else None
                             if service and service not in portal_errors:
                                 portal_errors.append(service)
+                        # Capture katastar geometry for mini-map
+                        if (
+                            not is_error
+                            and tool_name == "katastar__search_property"
+                            and isinstance(parsed, dict)
+                            and parsed.get("geometry")
+                        ):
+                            geometry = parsed["geometry"]
                     except (json.JSONDecodeError, TypeError):
                         tool_status = "completed"
                 except Exception as exc:
@@ -686,6 +704,7 @@ class ChatService:
 
         final_text = ""
         portal_errors: list[str] = []
+        geometry: dict | None = None
 
         async with self._get_lock(user_id):
             if provider == "gemini":
@@ -699,7 +718,7 @@ class ChatService:
                 )
                 try:
                     async with self._ai_semaphore:
-                        final_text, portal_errors = await asyncio.wait_for(
+                        final_text, portal_errors, geometry = await asyncio.wait_for(
                             self._agentic_loop_gemini(history, gemini_tools, user_id, db),
                             timeout=settings.RESPONSE_TIMEOUT,
                         )
@@ -714,7 +733,7 @@ class ChatService:
                 history.append({"role": "user", "content": message})
                 try:
                     async with self._ai_semaphore:
-                        final_text, portal_errors = await asyncio.wait_for(
+                        final_text, portal_errors, geometry = await asyncio.wait_for(
                             self._agentic_loop_openai(history, openai_tools, user_id, db),
                             timeout=settings.RESPONSE_TIMEOUT,
                         )
@@ -771,7 +790,7 @@ class ChatService:
             except Exception:
                 pass
 
-        return final_text, chat_session.id, portal_errors
+        return final_text, chat_session.id, portal_errors, geometry
 
 
 # Module-level singleton imported by routers
