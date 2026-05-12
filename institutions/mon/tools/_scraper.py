@@ -153,7 +153,19 @@ def scrape_listing(url: str, section_slug: str) -> list[dict]:
         except requests.RequestException:
             break
 
-        comp = resp.json()["components"][0]
+        try:
+            resp_data = resp.json()
+        except ValueError:
+            break
+
+        components = resp_data.get("components")
+        if not isinstance(resp_data, dict) or not isinstance(components, list) or not components:
+            break
+
+        comp = components[0]
+        if not isinstance(comp, dict):
+            break
+
         html = comp.get("effects", {}).get("html", "")
         if not html:
             break
