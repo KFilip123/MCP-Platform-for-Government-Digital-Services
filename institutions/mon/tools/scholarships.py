@@ -4,10 +4,11 @@ institutions/mon/tools/scholarships.py
 Tools for browsing MON scholarships (Стипендии) from mon.gov.mk.
 """
 
+from institutions.mon.config import SCHOLARSHIPS_URL
 from institutions.mon.tools._scraper import scrape_listing, scrape_detail
 
-_SCHOLARSHIPS_URL = "https://mon.gov.mk/mk-MK/konkursi-i-stipendii/stipendii-mon"
-_SECTION = "stipendii-mon"
+_SCHOLARSHIPS_URL = SCHOLARSHIPS_URL
+_SECTION = _SCHOLARSHIPS_URL.rstrip("/").rsplit("/", 1)[-1]
 
 
 def list_mon_scholarships() -> dict:
@@ -29,6 +30,8 @@ def list_mon_scholarships() -> dict:
         }
     """
     items = scrape_listing(_SCHOLARSHIPS_URL, _SECTION)
+    if isinstance(items, dict) and items.get("error"):
+        return items
     return {"scholarships": items, "total": len(items)}
 
 

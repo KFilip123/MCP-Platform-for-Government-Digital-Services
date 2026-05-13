@@ -4,10 +4,11 @@ institutions/mon/tools/competitions.py
 Tools for browsing MON competitions (Конкурси) from mon.gov.mk.
 """
 
+from institutions.mon.config import COMPETITIONS_URL
 from institutions.mon.tools._scraper import scrape_listing, scrape_detail
 
-_COMPETITIONS_URL = "https://mon.gov.mk/mk-MK/konkursi-i-stipendii/konkursi-mon"
-_SECTION = "konkursi-mon"
+_COMPETITIONS_URL = COMPETITIONS_URL
+_SECTION = _COMPETITIONS_URL.rstrip("/").rsplit("/", 1)[-1]
 
 
 def list_mon_competitions() -> dict:
@@ -29,6 +30,8 @@ def list_mon_competitions() -> dict:
         }
     """
     items = scrape_listing(_COMPETITIONS_URL, _SECTION)
+    if isinstance(items, dict) and items.get("error"):
+        return items
     return {"competitions": items, "total": len(items)}
 
 

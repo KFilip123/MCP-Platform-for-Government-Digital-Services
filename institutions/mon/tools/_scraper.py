@@ -16,6 +16,8 @@ from urllib.parse import unquote
 import requests
 from bs4 import BeautifulSoup
 
+from institutions.shared.errors import tool_error
+
 BASE_URL = "https://mon.gov.mk"
 _LIVEWIRE_UPDATE = f"{BASE_URL}/livewire/update"
 _MAX_PAGES = 30  # safety cap
@@ -91,7 +93,7 @@ def _extract_items(html: str, section_slug: str) -> list[dict]:
     return items
 
 
-def scrape_listing(url: str, section_slug: str) -> list[dict]:
+def scrape_listing(url: str, section_slug: str) -> list[dict] | dict:
     """
     Scrape ALL pages of a mon.gov.mk listing (competitions or scholarships).
 
@@ -103,8 +105,8 @@ def scrape_listing(url: str, section_slug: str) -> list[dict]:
     try:
         r = sess.get(url, timeout=15)
         r.raise_for_status()
-    except requests.RequestException:
-        return []
+    except requests.RequestException as exc:
+        return tool_error("network_error", f"Could not reach mon.gov.mk: {exc}")
 
     soup = BeautifulSoup(r.text, "html.parser")
 
@@ -150,8 +152,11 @@ def scrape_listing(url: str, section_slug: str) -> list[dict]:
         except requests.RequestException:
             break
 
-        comp = resp.json()["components"][0]
-        html = comp.get("effects", {}).get("html", "")
+        try:
+            comp = resp.json()["components"][0]
+            html = comp.get("effects", {}).get("html", "")
+        except (ValueError, KeyError, IndexError):
+            break
         if not html:
             break
 
@@ -184,7 +189,7 @@ def scrape_detail(url: str) -> dict:
         r = requests.get(url, headers={"User-Agent": _UA}, timeout=15)
         r.raise_for_status()
     except requests.RequestException as exc:
-        return {"error": f"Could not fetch page: {exc}"}
+        return tool_error("network_error", f"Could not fetch page: {exc}")
 
     soup = BeautifulSoup(r.text, "html.parser")
 
