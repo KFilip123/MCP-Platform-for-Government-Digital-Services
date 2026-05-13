@@ -390,20 +390,51 @@ def search_property(
         if not mun_results:
             return tool_error("not_found", f"Municipality '{municipality_name}' not found.")
 
-        mun = mun_results[0]
+        # ── Step 1b: pick the right municipality from the list ────────────────
+        # The API may return multiple hits (e.g. "ЦЕНТАР 1" and "ЦЕНТАР 2" for
+        # the query "ЦЕНТАР"). Try each candidate until one has the requested
+        # property_certificate or parcel_number, then commit to that one.
+        mun = mun_results[0]          # default — overwritten below if needed
         dept_id = mun["departmentID"]
         mun_id  = mun["municipalityID"]
 
+        if len(mun_results) > 1 and property_certificate:
+            # Probe each municipality with a lightweight call
+            for candidate in mun_results:
+                try:
+                    probe = _public_get(
+                        f"{PORTAL_BASE_URL}/api/v2/propertyCertificates/findParcels"
+                        f"/{candidate['departmentID']}/{candidate['municipalityID']}",
+                        params={"propertyCertificate": property_certificate, "page": 0, "size": 1},
+                    ).json()
+                    if probe.get("content"):
+                        mun     = candidate
+                        dept_id = candidate["departmentID"]
+                        mun_id  = candidate["municipalityID"]
+                        break
+                except Exception:
+                    continue
+
         # ── Step 2: resolve parcel_number → property_certificate via API ────────
         if parcel_number:
-            # Step 2a: get parcelID from parcel number
-            parcel_resp = _public_get(
-                f"{PORTAL_BASE_URL}/api/v2/parcels/findByParcelNumber"
-                f"/{dept_id}/{mun_id}",
-                params={"parcelNumber": parcel_number},
-            ).json()
+            found_parcel = False
+            for candidate in mun_results:
+                try:
+                    parcel_resp = _public_get(
+                        f"{PORTAL_BASE_URL}/api/v2/parcels/findByParcelNumber"
+                        f"/{candidate['departmentID']}/{candidate['municipalityID']}",
+                        params={"parcelNumber": parcel_number},
+                    ).json()
+                    if parcel_resp and "id" in parcel_resp:
+                        mun     = candidate
+                        dept_id = candidate["departmentID"]
+                        mun_id  = candidate["municipalityID"]
+                        found_parcel = True
+                        break
+                except Exception:
+                    continue
 
-            if not parcel_resp or "id" not in parcel_resp:
+            if not found_parcel:
                 return tool_error(
                     "not_found",
                     f"Parcel '{parcel_number}' not found in municipality '{municipality_name}'."
