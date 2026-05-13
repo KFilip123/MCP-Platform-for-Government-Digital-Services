@@ -112,7 +112,10 @@ def scrape_listing(url: str, section_slug: str) -> list[dict] | dict:
 
     snapshot = None
     for tag in soup.find_all(attrs={"wire:snapshot": True}):
-        data = json.loads(unescape(tag["wire:snapshot"]))
+        try:
+            data = json.loads(unescape(tag["wire:snapshot"]))
+        except json.JSONDecodeError:
+            continue
         if data.get("memo", {}).get("name") == "public.subcategory":
             snapshot = data
             break
@@ -153,10 +156,19 @@ def scrape_listing(url: str, section_slug: str) -> list[dict] | dict:
             break
 
         try:
-            comp = resp.json()["components"][0]
-            html = comp.get("effects", {}).get("html", "")
-        except (ValueError, KeyError, IndexError):
+            resp_data = resp.json()
+        except ValueError:
             break
+
+        components = resp_data.get("components")
+        if not isinstance(resp_data, dict) or not isinstance(components, list) or not components:
+            break
+
+        comp = components[0]
+        if not isinstance(comp, dict):
+            break
+
+        html = comp.get("effects", {}).get("html", "")
         if not html:
             break
 
